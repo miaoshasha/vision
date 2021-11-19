@@ -31,7 +31,7 @@ import utils
 from coco_utils import get_coco, get_coco_kp
 from engine import train_one_epoch, evaluate
 from group_by_aspect_ratio import GroupedBatchSampler, create_aspect_ratio_groups
-
+import torch_xla.debug.metrics as met
 
 try:
     from torchvision.prototype import models as PM
@@ -259,3 +259,4 @@ def main(args):
 if __name__ == "__main__":
     args = get_args_parser().parse_args()
     main(args)
+    print(met.metrics_report())
