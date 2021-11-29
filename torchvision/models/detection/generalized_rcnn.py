@@ -8,6 +8,7 @@ from typing import Tuple, List, Dict, Optional, Union
 
 import torch
 from torch import nn, Tensor
+import torch_xla.core.xla_model as xm
 
 from ...utils import _log_api_usage_once
 
