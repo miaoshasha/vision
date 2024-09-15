@@ -8,6 +8,8 @@ import utils
 from coco_eval import CocoEvaluator
 from coco_utils import get_coco_api_from_dataset
 
+import torch_xla
+import torch_xla.core.xla_model as xm
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     model.train()
@@ -68,7 +70,8 @@ def _get_iou_types(model):
     return iou_types
 
 
-@torch.inference_mode()
+#@torch.inference_mode()
+@torch.no_grad()
 def evaluate(model, data_loader, device):
     n_threads = torch.get_num_threads()
     # FIXME remove this and make paste_masks_in_image run on the GPU
@@ -85,6 +88,9 @@ def evaluate(model, data_loader, device):
     for images, targets in metric_logger.log_every(data_loader, 100, header):
         images = list(img.to(device) for img in images)
 
+        if device.type == 'xla':
+            images = list(img.to(device) for img in images)
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         if torch.cuda.is_available():
             torch.cuda.synchronize()
         model_time = time.time()
@@ -98,6 +104,9 @@ def evaluate(model, data_loader, device):
         coco_evaluator.update(res)
         evaluator_time = time.time() - evaluator_time
         metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
+        print('model time {},  eval time {}'.format(model_time, evaluator_time))
+        if device.type == 'xla':
+            xm.mark_step()
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
